@@ -1,0 +1,140 @@
+
+/* Style général */
+QMainWindow {
+    background-color: #020E24;
+}
+/* Style général pour tous les QLabel */
+QLabel {
+    font-family: Arial;
+    color: #34495e;
+}
+
+/* Style spécifique pour le titre */
+QLabel#label_title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ecf0f1;
+    padding: 15px;
+    background-color: #20345B;
+
+    border-radius: 8px;
+    margin: 10px 0;
+    /*border: 2px solid #3498db;*/
+}
+
+/* Container principal de la navbar */
+QWidget#nav_container {
+    background-color: #0B172F;
+    /*border-radius: 15px;*/
+    padding: 50px;
+}
+
+/* Style spécifique pour le logo */
+QLabel#logo {
+
+    background-color: #0B172F;
+
+}
+
+
+QPushButton {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 5px;
+    font-size: 14px;
+}
+
+QPushButton:hover {
+    background-color: #2980b9;
+}
+
+/* Barre de navigation */
+QPushButton#nav_button {
+    background-color: #0B172F;
+    border-radius: 0;
+    padding: 10px;
+    font-size: 16px;
+    margin: 0px;
+    width: 100%;
+}
+
+QPushButton#nav_button:hover {
+    background-color: #2c3e50;
+}
+
+QPushButton#nav_button:checked {
+    background-color: #28F7DB66;
+
+    font-weight: bold;
+}
+
+/* Conteneur des pages */
+QWidget#page_container {
+    background-color: #020E24;
+    border-radius: 0px;
+}
+
+/* Titres des pages */
+QLabel#page_title {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ecf0f1;
+    background-color: #20345B;
+    margin: 10px 0;
+}
+
+QWidget {
+    background-color: #0D1B2A;
+    color: white;
+}
+
+/* Modifier la bordure des cadres spécifiques */
+#video, #gas, #access, #smoke, #temperature, #voice, #shock ,#History,QLabel#page_title {
+    border: 4px solid #4728f766; /* Épaisseur et couleur de la bordure */
+    border-radius: 10px; /* Coins arrondis */
+    padding: 10px; /* Espacement intérieur */
+}
+
+/* Style pour le widget vidéo */
+QVideoWidget {
+    background-color: #000000;  /* Fond noir pour la vidéo */
+    border: 2px solid #4A90E2;
+    border-radius: 5px;
+}
+
+/* Style pour le slider de progression */
+QSlider::groove:horizontal {
+    border: 1px solid #3A3A3A;
+    height: 10px;
+    background: #3A3A3A;
+    margin: 0px;
+    border-radius: 5px;
+}
+QSlider::handle:horizontal {
+    background: #4A90E2;
+    border: 1px solid #2D2D2D;
+    width: 20px;
+    margin: -5px 0;
+    border-radius: 10px;
+}
+
+/* Style pour le slider de volume (optionnel, si on lui donne un objectName unique) */
+QSlider#volume_slider {
+    min-width: 80px;
+}
+QSlider::groove:horizontal#volume_slider {
+    border: 1px solid #3A3A3A;
+    height: 10px;
+    background: #3A3A3A;
+    margin: 0px;
+    border-radius: 5px;
+}
+QSlider::handle:horizontal#volume_slider {
+    background: #E74C3C;
+    border: 1px solid #2D2D2D;
+    width: 20px;
+    margin: -5px 0;
+    border-radius: 10px;
+}
