@@ -31,11 +31,20 @@ QWidget#nav_container {
 
 /* Style spécifique pour le logo */
 QLabel#logo {
-
     background-color: #0B172F;
+}
+
+QLabel#warning_text {
+    color: #FF9800;
+    padding: 10px; /* Espacement intérieur */
 
 }
 
+QLabel#warning {
+    color: #FF9800;
+    padding: 0; /* Espacement intérieur */
+
+}
 
 QPushButton {
     background-color: #3498db;
