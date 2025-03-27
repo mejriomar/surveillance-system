@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QGridLayout, QFrame, QSpacerItem, QSizePolicy
-from PyQt6.QtGui import QFont
-from PyQt6.QtCore import Qt, QFile, QTextStream
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QGridLayout, QFrame, QSpacerItem, QSizePolicy,QPushButton,QToolButton
+from PyQt6.QtGui import QFont,QIcon
+from PyQt6.QtCore import Qt, QFile, QTextStream,QSize
 from features.videoPlayer import VideoPlayer
 
 class Camera(QWidget):
@@ -30,7 +30,7 @@ class Camera(QWidget):
         # Section Gaz et Fumée
         grid.addWidget(self.video_frame(),0, 0,2,2)
         grid.addWidget(self.create_sensor_box("history", "", "smoke"), 2, 0,2,2)
-        grid.addWidget(self.create_sensor_box("controle", "", "gas"),0, 2,2,2)
+        grid.addWidget(self.cam_controler(),0, 2,2,2)
         grid.addWidget(self.create_sensor_box("warning", "", "smoke"), 2, 2,2,2)
 
         # Ajouter la grille au layout principal avec un stretch factor
@@ -54,6 +54,44 @@ class Camera(QWidget):
         frame.setLayout(layout)
         return frame
 
+    def create_button(self,icon_path):
+        button = QToolButton()
+        button.setIcon(QIcon(icon_path))
+        button.setMinimumSize(80, 80)  # Taille minimale du bouton
+        button.setIconSize(QSize(80, 80))  # Taille de l'icône
+        button.setAutoRaise(True)  # Effet de surbrillance au survol
+        button.setObjectName("control_button")
+        button.setCursor(Qt.CursorShape.PointingHandCursor)
+        return button
+
+    def cam_controler(self):
+        up_button = self.create_button("pages/images/up.png")
+        up_button.clicked.connect(self.up)
+        down_button = self.create_button("pages/images/down.png")
+        left_button = self.create_button("pages/images/left.png")
+        right_button = self.create_button("pages/images/right.png")
+        reset_button = self.create_button("pages/images/reset.png")
+        reset_button.setIconSize(QSize(50, 50))  # Taille de l'icône
+        # Configuration du layout en grille
+        layout = QGridLayout()
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setHorizontalSpacing(0)
+        layout.setVerticalSpacing(0)
+
+        layout.addWidget(up_button, 0, 1,Qt.AlignmentFlag.AlignBottom)
+        layout.addWidget(left_button, 1, 0,Qt.AlignmentFlag.AlignRight)
+        layout.addWidget(reset_button, 1, 1,Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(right_button, 1, 2,Qt.AlignmentFlag.AlignLeft)
+        layout.addWidget(down_button, 2, 1,Qt.AlignmentFlag.AlignTop)
+
+        # Encapsulation dans un QFrame
+        frame = QFrame()
+        frame.setObjectName("video")
+        frame.setLayout(layout)
+
+        return frame
+
+
     def video_frame(self):
         self.video_player = VideoPlayer()
         frame = QFrame()
@@ -67,3 +105,5 @@ class Camera(QWidget):
             stream = QTextStream(file)
             self.setStyleSheet(stream.readAll())
             file.close()
+    def up(self):
+        print("up")
