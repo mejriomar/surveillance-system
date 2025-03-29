@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QStackedWidget, QLabel
 from PyQt6.QtCore import Qt, QFile, QTextStream
-from PyQt6.QtGui import QPixmap
+from PyQt6.QtGui import QPixmap,QIcon
 from pages.home import Home
 from pages.notification import Notification
 from pages.camera import Camera
@@ -16,11 +16,11 @@ class MainWindow(QMainWindow):
 
         # Configuration de l'interface
         self.central_widget = QWidget()
+        self.setWindowIcon(QIcon("logo.png"))
         self.setCentralWidget(self.central_widget)
         self.main_layout = QHBoxLayout(self.central_widget)
         self.main_layout.setContentsMargins(0, 0, 0, 0)
         self.main_layout.setSpacing(0)
-
         self._create_nav_bar()
         self._create_page_container()
 
