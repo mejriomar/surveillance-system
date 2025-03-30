@@ -1,3 +1,11 @@
 {
-    "movement": 1
+    "movement": 0,
+    "access" : 1,
+    "temperature": 1,
+    "flame": 1,
+    "gaz": 1,
+    "dore": 1,
+    "window": 1,
+    "voice": 1,
+    "tempreture_value": 40
 }

@@ -3,6 +3,17 @@
 QMainWindow {
     background-color: #020E24;
 }
+
+#control_button{
+    background-color: #020E24;
+}
+#tempreture_text{
+
+    color: #FF0000;
+
+}
+
+
 /* Style général pour tous les QLabel */
 QLabel {
     font-family: Arial;
@@ -95,7 +106,6 @@ QLabel#page_title {
 }
 
 QWidget {
-    background-color: #0D1B2A;
     color: white;
 }
 

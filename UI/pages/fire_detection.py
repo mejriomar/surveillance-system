@@ -1,8 +1,9 @@
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QLabel, QVBoxLayout, QGridLayout, QFrame, QSpacerItem, QSizePolicy
-)
-from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QGridLayout, QFrame
+from PyQt6.QtGui import QFont, QPixmap
 from PyQt6.QtCore import Qt, QFile, QTextStream
+import json
+from features.background_tasks import Background_tasks
+from features.functions import dynamic_resize_image, dynamic_resize_text
 
 class Fire_detection(QWidget):
     def __init__(self):
@@ -24,40 +25,176 @@ class Fire_detection(QWidget):
         main_layout.addWidget(title)
 
         # Grille principale
-        grid = QGridLayout()
-        grid.setContentsMargins(0, 0, 0, 0)
-        grid.setSpacing(10)
+        self.grid = QGridLayout()
+        self.grid.setContentsMargins(0, 0, 0, 0)
+        self.grid.setSpacing(10)
+        main_layout.addLayout(self.grid, 1)
 
-        # Section Gaz et Fumée
-        grid.addWidget(self.create_sensor_box("Gaz", "🔥", "gas"),     0, 0)
-        grid.addWidget(self.create_sensor_box("Fumée", "🔥", "smoke"), 0, 1)
+        # Initialisation d'attributs pour le caching et la réutilisation
+        self.pixmap_cache = {}
+        self.data = self._load_json("data.json")
+        self.warn_size = {}  # Taille initiale
+        self.warning_frames = {}  # Dictionnaire pour stocker plusieurs widgets d'avertissement
 
-        # Température
-        grid.addWidget(self.create_sensor_box("Température", "🌡️ 30", "temperature"), 0, 2, 1, 2)
+        # Démarrer les tâches en arrière-plan
+        self.background_tasks = Background_tasks()
+        self.background_tasks.signal1.connect(self.repetitive)
+        self.background_tasks.start()
 
-        # Vidéo en direct
-        grid.addWidget(self.create_sensor_box("History", "🌡️ 30", "History"), 1, 0, 2, 4)
+    def _load_json(self, filename):
+        with open(filename, "r", encoding="utf-8") as file:
+            return json.load(file)
 
-        # Ajouter la grille au layout principal avec un stretch factor
-        main_layout.addLayout(grid, 1)
+    def get_pixmap(self, path):
+        """Retourne un QPixmap mis en cache pour éviter de recharger l'image à chaque fois."""
+        if path not in self.pixmap_cache:
+            self.pixmap_cache[path] = QPixmap(path)
+        return self.pixmap_cache[path]
 
-        # Optionnel: si vous voulez un petit espace en bas, vous pouvez rajouter un spacer
-        # main_layout.addStretch()
-
-    def create_sensor_box(self, title, icon, object_name):
+    def create_warning_frame(self):
+        """Crée un widget d'avertissement qui sera mis à jour ultérieurement."""
         frame = QFrame()
-        frame.setObjectName(object_name)
-        layout = QVBoxLayout()
+        frame.setObjectName("video")
+        layout = QVBoxLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        label = QLabel(f"{icon}\n{title}")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
+        # Label pour l'image
+        warning_label = QLabel()
+        warning_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        warning_label.setObjectName("warning")
+        warning_label.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(label)
-        frame.setLayout(layout)
+        # Label pour le texte d'avertissement
+        warning_text_label = QLabel()
+        warning_text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        warning_text_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        warning_text_label.setObjectName("warning_text")
+        warning_text_label.setContentsMargins(0, 0, 0, 0)
+
+        layout.addWidget(warning_label)
+        layout.addWidget(warning_text_label)
+
+        # Conserver les références pour une mise à jour facile
+        frame.warning_label = warning_label
+        frame.warning_text_label = warning_text_label
         return frame
+
+    def warning_frame(self, warn_conf):
+
+        """
+        Met à jour ou crée un widget d'avertissement avec les informations fournies dans warn_conf.
+        Chaque widget est indexé par sa position (row, column) pour garantir l'unicité.
+        """
+        warn_max_size = 80
+        warn_size_variable = 25  # Valeur de taille variable pour l'animation
+        grid_pos = warn_conf["grid_position"]
+        # Utiliser la position comme clé unique (row, column)
+        key = (grid_pos["row"], grid_pos["column"])
+        if key not in self.warning_frames:
+            frame = self.create_warning_frame()
+            self.warning_frames[key] = frame
+            self.grid.addWidget(frame,
+                                grid_pos["row"],
+                                grid_pos["column"],
+                                grid_pos["row_n"],
+                                grid_pos["column_n"])
+            self.warn_size[key] = warn_max_size  # Taille initiale pour chaque avertissement
+        else:
+            frame = self.warning_frames[key]
+
+        # Recharger les données JSON
+        self.data = self._load_json("data.json")
+        # Récupérer la valeur pour ce type d'avertissement
+        warn_status = self.data.get(warn_conf["warning_type"], 0)
+
+        if warn_status == 1:
+            self.warn_size[key] = self.warn_size[key] + warn_max_size - warn_size_variable if self.warn_size[key] < warn_max_size else warn_max_size - warn_size_variable
+
+            pixmap = self.get_pixmap(warn_conf["warning_icon"])
+            frame.warning_text_label.setText(warn_conf["warning_text"])
+            frame.warning_text_label.setStyleSheet(warn_conf["warning_color"])
+        else:
+            self.warn_size[key] = warn_max_size
+            pixmap = self.get_pixmap(warn_conf["no_warning_icon"])
+            frame.warning_text_label.setText(warn_conf["no_warning_text"])
+            frame.warning_text_label.setStyleSheet(warn_conf["no_warning_color"])
+
+        # Mettre à jour l'image en redimensionnant le pixmap
+        dynamic_resize_image(frame, frame.warning_label, pixmap, percentage=0.3, max_size=self.warn_size[key])
+        dynamic_resize_text(frame, frame.warning_text_label, percentage=0.05, min_font_size=10, max_font_size=20)
+
+    def repetitive(self):
+        """Méthode appelée périodiquement par Background_tasks pour mettre à jour les avertissements."""
+        # Exemple de configuration pour un avertissement de mouvement
+        motion_warning_conf = {
+            "warning_type": "gaz",
+            "warning_text": "Gaz detected!",
+            "no_warning_text": "No Gaz detected",
+            "no_warning_icon": "pages/images/warning/no_gaz.png",
+            "warning_icon": "pages/images/warning/gaz.png",
+            "warning_color": "color: #FF9800;",
+            "no_warning_color": "color: green;",
+            "grid_position": {
+                "row": 0,
+                "column": 0,
+                "row_n": 1,
+                "column_n": 1
+            }
+        }
+        self.warning_frame(motion_warning_conf)
+
+        # Exemple de configuration pour un avertissement de gaz
+        flame_warning_conf = {
+            "warning_type": "flame",
+            "warning_text": "falme detected!",
+            "no_warning_text": "No falme detected!",
+            "no_warning_icon": "pages/images/warning/no_flame.png",
+            "warning_icon": "pages/images/warning/flame.png",
+            "warning_color": "color: #FF9800;",
+            "no_warning_color": "color: green;",
+            "grid_position": {
+                "row": 0,
+                "column": 1,
+                "row_n": 1,
+                "column_n": 1
+            }
+        }
+        self.warning_frame(flame_warning_conf)
+
+        temperature_warning_conf = {
+            "warning_type": "temperature",
+            "warning_text": "tempreture limit detected!",
+            "no_warning_text": "No tempreture limit detected",
+            "no_warning_icon": "pages/images/warning/no_tempr.png",
+            "warning_icon": "pages/images/warning/tempr.png",
+            "warning_color": "color: orange;",
+            "no_warning_color": "color: green;",
+            "grid_position": {
+                "row": 0,
+                "column": 2,  # Position différente pour éviter le chevauchement
+                "row_n": 1,
+                "column_n": 2
+            }
+        }
+        self.warning_frame(temperature_warning_conf)
+
+        temperature_warning_conf = {
+            "warning_type": "temperature",
+            "warning_text": "tempreture limit detected!",
+            "no_warning_text": "No tempreture limit detected",
+            "no_warning_icon": "pages/images/warning/no_tempr.png",
+            "warning_icon": "pages/images/warning/tempr.png",
+            "warning_color": "color: orange;",
+            "no_warning_color": "color: green;",
+            "grid_position": {
+                "row": 1,
+                "column": 0,  # Position différente pour éviter le chevauchement
+                "row_n": 1,
+                "column_n": 4
+            }
+        }
+        self.warning_frame(temperature_warning_conf)
 
     def _load_stylesheet(self, filename):
         file = QFile(filename)

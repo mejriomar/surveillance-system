@@ -8,5 +8,5 @@ class Background_tasks(QThread):
 
     def run(self):
         while True:
-            self.signal1.emit()  # Émet le signal pour appeler
+            self.signal1.emit()
             time.sleep(0.5)
