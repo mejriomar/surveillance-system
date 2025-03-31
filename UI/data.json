@@ -1,5 +1,5 @@
 {
-    "movement": 0,
+    "movement": 1,
     "access" : 1,
     "temperature": 1,
     "flame": 1,
@@ -7,5 +7,5 @@
     "dore": 1,
     "window": 1,
     "voice": 1,
-    "tempreture_value": 40
+    "tempreture_value": 8
 }

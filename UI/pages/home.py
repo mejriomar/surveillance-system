@@ -3,36 +3,8 @@ from PyQt6.QtGui import QFont, QPixmap,QPainter, QPen
 from PyQt6.QtCore import Qt, QFile, QTextStream,QRectF
 import json
 from features.background_tasks import Background_tasks
+from features.circularLabel import CircularLabel
 from features.functions import dynamic_resize_image, dynamic_resize_text
-
-
-class CircularLabel(QLabel):
-    def __init__(self, text, parent=None):
-        super().__init__(text, parent)
-        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.setFont(QFont("Arial", 40, QFont.Weight.Bold))
-        self.setStyleSheet("color: red;")  # Fond transparent
-        self.setFixedSize(200, 200)  # Taille du widget (cercle)
-        self.setObjectName("circular_label")
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setPen(Qt.GlobalColor.red)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Définir un pinceau pour la bordure rouge épaisse
-        pen = QPen(Qt.GlobalColor.red, 10)
-        painter.setPen(pen)
-
-        # Calculer le rectangle d'affichage en tenant compte de l'épaisseur du trait
-        margin = pen.width() / 2
-        rect = QRectF(margin, margin, self.width() - 2 * margin, self.height() - 2 * margin)
-        painter.drawEllipse(rect)
-
-        # Dessiner le texte centré (en noir pour un meilleur contraste)
-        painter.setPen(Qt.GlobalColor.black)
-        painter.setFont(self.font())
-        painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, self.text())
 
 class Home(QWidget):
     def __init__(self):
