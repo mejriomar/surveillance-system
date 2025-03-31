@@ -90,7 +90,6 @@ class Home(QWidget):
         return frame
 
     def warning_frame(self, warn_conf):
-
         """
         Met à jour ou crée un widget d'avertissement avec les informations fournies dans warn_conf.
         Chaque widget est indexé par sa position (row, column) pour garantir l'unicité.
