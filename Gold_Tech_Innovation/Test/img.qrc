@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/res">
+        <file>img.qrc</file>
+        <file>Logo_Goldx1.png</file>
+        <file>Logox1.png</file>
+        <file>fa6-solid_temperature-low.png</file>
+        <file>noto_fire.png</file>
+        <file>Vector.png</file>
+        <file>test.png</file>
+        <file>unlock.png</file>
+        <file>song.png</file>
+        <file>button.png</file>
+        <file>tabler_search.png</file>
+    </qresource>
+</RCC>
