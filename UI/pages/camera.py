@@ -6,7 +6,7 @@ from features.background_tasks import Background_tasks
 import json
 import time
 from features.functions import dynamic_resize_image, dynamic_resize_text, resize_button_icon
-
+from features.backend import websocket_client
 
 class Camera(QWidget):
     def __init__(self):
@@ -206,5 +206,7 @@ class Camera(QWidget):
             file.close()
     def up(self):
         print("up")
+        data = {"command": "toggle", "value": 1}
+        websocket_client.send_data(data)
 
 
