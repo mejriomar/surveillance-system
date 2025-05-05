@@ -1,9 +1,8 @@
-# websocket_handler.py
-from PyQt6.QtCore import QObject, pyqtSignal
-import websocket
+from PyQt6.QtCore import QObject, pyqtSignal, QTimer, QUrl
+from PyQt6.QtWebSockets import QWebSocket
+from PyQt6.QtNetwork import QAbstractSocket
+
 import json
-import threading
-import time
 
 class WebSocketClient(QObject):
     data_received = pyqtSignal(dict)  # Signal pour les données reçues
@@ -11,65 +10,66 @@ class WebSocketClient(QObject):
 
     def __init__(self, url):
         super().__init__()
-        self.url = url
-        self.ws = None
-        self.reconnect_interval = 5
+        self.url = QUrl(url)
+        self.socket = QWebSocket()
+        self.reconnect_interval = 1  # seconds
         self.is_reconnecting = False
+        self._setup_connections()
+
+    def _setup_connections(self):
+        """Connect Qt signals to slots"""
+        self.socket.connected.connect(self.on_connected)
+        self.socket.disconnected.connect(self.on_disconnected)
+        self.socket.textMessageReceived.connect(self.on_message)
+        self.socket.errorOccurred.connect(self.on_error)
 
     def start(self):
-        """Démarre la connexion WebSocket dans un thread séparé."""
-        threading.Thread(target=self.run_websocket, daemon=True).start()
+        """Démarre la connexion WebSocket"""
+        self.status_updated.emit(f"Tentative de connexion à {self.url.toString()}")
+        self.socket.open(self.url)
 
-    def run_websocket(self):
-        """Boucle de connexion WebSocket avec reconnexion automatique."""
-        while True:
-            try:
-                self.ws = websocket.WebSocketApp(
-                    self.url,
-                    on_message=self.on_message,
-                    on_error=self.on_error,
-                    on_close=self.on_close,
-                    on_open=self.on_open
-                )
-                self.ws.run_forever()
-            except Exception as e:
-                self.status_updated.emit(f"Erreur critique : {e}")
-            finally:
-                if not self.is_reconnecting:
-                    self.is_reconnecting = True
-                    self.status_updated.emit(
-                        f"Tentative de reconnexion dans {self.reconnect_interval} secondes..."
-                    )
-                    time.sleep(self.reconnect_interval)
+    def on_connected(self):
+        """Gère l'événement de connexion réussie"""
+        self.is_reconnecting = False
+        self.status_updated.emit("Connexion WebSocket établie")
 
-    def on_message(self, ws, message):
-        """Traite les messages reçus."""
+    def on_disconnected(self):
+        """Gère la déconnexion"""
+        self.status_updated.emit("Connexion WebSocket perdue")
+        self._schedule_reconnect()
+
+    def on_message(self, message):
+        """Traite les messages reçus"""
         try:
             data = json.loads(message)
             self.data_received.emit(data)
         except json.JSONDecodeError as e:
             self.status_updated.emit(f"Erreur de décodage JSON : {e}")
 
-    def on_error(self, ws, error):
-        self.status_updated.emit(f"Erreur WebSocket : {error}")
+    def on_error(self, error):
+        """Gère les erreurs"""
+        error_str = self.socket.errorString()
+        self.status_updated.emit(f"Erreur WebSocket : {error_str}")
+        self.socket.close()
 
-    def on_close(self, ws, close_status_code, close_msg):
-        self.status_updated.emit("Connexion WebSocket fermée")
-
-    def on_open(self, ws):
-        self.is_reconnecting = False
-        self.status_updated.emit("Connexion WebSocket ouverte")
+    def _schedule_reconnect(self):
+        """Planifie une reconnexion après un délai"""
+        if not self.is_reconnecting:
+            self.is_reconnecting = True
+            QTimer.singleShot(self.reconnect_interval * 1000, self.start)
 
     def send_data(self, data):
-        """Envoie des données via WebSocket."""
-        if self.ws and self.ws.sock and self.ws.sock.connected:
+        """Envoie des données via WebSocket"""
+        if self.socket.state() == QAbstractSocket.SocketState.ConnectedState:
             try:
-                self.ws.send(json.dumps(data))
+                self.socket.sendTextMessage(json.dumps(data))
                 self.status_updated.emit("Données envoyées avec succès")
             except Exception as e:
-                self.status_updated.emit(f"Erreur envoi : {e}")
+                self.status_updated.emit(f"Erreur lors de l'envoi : {e}")
         else:
             self.status_updated.emit("Erreur : Connexion inactive")
 
 # Instance globale du client WebSocket
-websocket_client = WebSocketClient("ws://192.168.1.15/ws")
+# websocket_client = WebSocketClient("ws://192.168.43.237/ws")
+websocket_client = WebSocketClient("ws://192.168.43.66:8765")
+# websocket_client = WebSocketClient("ws://esp32.local/ws")

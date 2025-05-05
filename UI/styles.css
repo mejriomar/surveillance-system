@@ -104,6 +104,11 @@ QLabel#page_title {
     background-color: #20345B;
     margin: 10px 0;
 }
+#tab_title{
+    font-size: 18px;
+    font-weight: bold;
+    color: black;
+}
 
 QWidget {
     color: white;
@@ -156,4 +161,95 @@ QSlider::handle:horizontal#volume_slider {
     width: 20px;
     margin: -5px 0;
     border-radius: 10px;
+}
+
+#text_edit {
+    background-color: #34495e;
+    color: white;
+    border: 1px solid #2c3e50;
+    border-radius: 5px;
+    padding: 10px;
+    font-size: 14px;
+}
+
+/* Style général pour le tableau */
+QTableWidget {
+
+    border: 1px solid #ddd; /* Bordure légère */
+    border-radius: 5px; /* Coins arrondis */
+    font-size: 14px; /* Taille de police */
+    font-family: Arial, sans-serif;
+
+}
+
+/* Style pour les en-têtes de colonne */
+QHeaderView::section {
+    background-color: #145197; /* Fond vert pour les en-têtes */
+
+    color: white; /* Texte blanc */
+    padding: 5px; /* Espacement interne */
+    border: 1px solid #4CAF50; /* Bordure assortie */
+    font-weight: bold; /* Texte en gras */
+    text-align: center; /* Alignement centré */
+}
+
+/* Style pour les cellules du tableau */
+QTableWidget::item {
+    padding: 5px; /* Espacement interne */
+    border: 1px solid #ddd; /* Bordure légère */
+    text-align: center; /* Alignement centré */
+
+}
+
+/* Style pour les cellules sélectionnées */
+QTableWidget::item:selected {
+    background-color: #cce7ff; /* Fond bleu clair pour la sélection */
+    color: black; /* Texte noir */
+}
+
+/* Alternance des couleurs de ligne pour une meilleure lisibilité */
+QTableWidget::item:nth-child(even) {
+    background-color: #f3f3f3; /* Fond gris clair pour les lignes paires */
+}
+
+QTableWidget::item:nth-child(odd) {
+    background-color: #ffffff; /* Fond blanc pour les lignes impaires */
+}
+
+
+/* Style général pour le widget d'onglets */
+QTabWidget {
+    background-color: #2c3e50; /* Fond bleu foncé */
+    border: none; /* Aucune bordure extérieure */
+    color:#145197;/* Texte blanc */
+}
+
+/* Style pour la barre d'onglets (en-tête des onglets) */
+QTabBar::tab {
+    background-color: #34495e; /* Fond gris foncé pour chaque onglet */
+    color: white; /* Texte blanc */
+    padding: 10px; /* Espacement interne */
+    margin-right: 2px; /* Espace entre les onglets */
+    border-top-left-radius: 5px; /* Coins arrondis en haut à gauche */
+    border-top-right-radius: 5px; /* Coins arrondis en haut à droite */
+    border: 1px solid #2c3e50; /* Bordure légère */
+}
+
+/* Style pour l'onglet sélectionné */
+QTabBar::tab:selected {
+    background-color: #145197;/* Vert clair pour l'onglet sélectionné */
+    color: black; /* Texte noir */
+    font-weight: bold; /* Texte en gras */
+}
+
+/* Style pour l'onglet survolé par la souris */
+QTabBar::tab:hover {
+    background-color: #3498db; /* Bleu clair lors du survol */
+}
+
+/* Style pour le contenu des onglets */
+QTabWidget::pane {
+    background-color: #ecf0f1; /* Fond gris clair pour le contenu */
+    border: 1px solid #2c3e50; /* Bordure assortie */
+    border-radius: 5px; /* Coins arrondis */
 }

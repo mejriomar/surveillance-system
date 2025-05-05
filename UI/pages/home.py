@@ -1,10 +1,12 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QGridLayout, QFrame
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QGridLayout, QFrame,QHBoxLayout
 from PyQt6.QtGui import QFont, QPixmap,QPainter, QPen
 from PyQt6.QtCore import Qt, QFile, QTextStream,QRectF
 import json
 from features.background_tasks import Background_tasks
 from features.circularLabel import CircularLabel
 from features.functions import dynamic_resize_image, dynamic_resize_text
+from features.browserWindow import camera
+# from features.browserWindow import camera_window
 
 class Home(QWidget):
     def __init__(self):
@@ -29,6 +31,7 @@ class Home(QWidget):
         self.grid = QGridLayout()
         self.grid.setContentsMargins(0, 0, 0, 0)
         self.grid.setSpacing(10)
+        self.grid.addLayout(self.get_h_views(), 0, 2, 2, 2)
         main_layout.addLayout(self.grid, 1)
 
         # Initialisation d'attributs pour le caching et la réutilisation
@@ -274,22 +277,22 @@ class Home(QWidget):
         }
         self.warning_frame(window_warning_conf)
 
-        movement_warning_conf = {
-            "warning_type": "movement",
-            "warning_text": "video detected!",
-            "no_warning_text": "No flame detected",
-            "no_warning_icon": "pages/images/warning/no_motion.png",
-            "warning_icon": "pages/images/warning/motion.png",
-            "warning_color": "color: orange;",
-            "no_warning_color": "color: green;",
-            "grid_position": {
-                "row": 0,
-                "column": 2,  # Position différente pour éviter le chevauchement
-                "row_n": 2,
-                "column_n": 2
-            }
-        }
-        self.warning_frame(movement_warning_conf)
+        # movement_warning_conf = {
+        #     "warning_type": "movement",
+        #     "warning_text": "video detected!",
+        #     "no_warning_text": "No flame detected",
+        #     "no_warning_icon": "pages/images/warning/no_motion.png",
+        #     "warning_icon": "pages/images/warning/motion.png",
+        #     "warning_color": "color: orange;",
+        #     "no_warning_color": "color: green;",
+        #     "grid_position": {
+        #         "row": 0,
+        #         "column": 2,  # Position différente pour éviter le chevauchement
+        #         "row_n": 2,
+        #         "column_n": 2
+        #     }
+        # }
+        # self.warning_frame(movement_warning_conf)
 
         temperature_warning_conf = {
             "warning_type": "temperature",
@@ -316,3 +319,9 @@ class Home(QWidget):
             stream = QTextStream(file)
             self.setStyleSheet(stream.readAll())
             file.close()
+
+    def get_h_views(self):
+        self.h_views = QHBoxLayout()
+        views = camera.get_views()
+        self.h_views.addWidget(views[1])
+        return self.h_views

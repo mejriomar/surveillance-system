@@ -10,3 +10,9 @@ class Background_tasks(QThread):
         while True:
             self.signal1.emit()
             time.sleep(0.5)
+
+class Background_tasks_nn(QThread):
+    signal1 = pyqtSignal()  # Signal pour appeler
+
+    def run(self):
+        self.signal1.emit()

@@ -5,6 +5,9 @@ import json
 from features.background_tasks import Background_tasks
 from features.functions import dynamic_resize_image, dynamic_resize_text
 
+from features.backend import websocket_client
+from features.history_ui import EventHistoryWidget
+import os
 class Identify(QWidget):
     def __init__(self):
         super().__init__()
@@ -28,6 +31,12 @@ class Identify(QWidget):
         self.grid = QGridLayout()
         self.grid.setContentsMargins(0, 0, 0, 0)
         self.grid.setSpacing(10)
+
+        events_to_display = ("voice", "access")  # Événements à afficher
+        self.history = EventHistoryWidget(*events_to_display)
+        self.grid.addWidget(self.history, 1, 0, 2, 4)  # Correction ici
+        websocket_client.data_received.connect(self.on_data_received)
+
         main_layout.addLayout(self.grid, 1)
 
         # Initialisation d'attributs pour le caching et la réutilisation
@@ -40,6 +49,9 @@ class Identify(QWidget):
         self.background_tasks = Background_tasks()
         self.background_tasks.signal1.connect(self.repetitive)
         self.background_tasks.start()
+
+    def on_data_received(self, data):
+        self.history.refresh_history()
 
     def _load_json(self, filename):
         with open(filename, "r", encoding="utf-8") as file:
@@ -162,22 +174,6 @@ class Identify(QWidget):
         }
         self.warning_frame(temperature_warning_conf)
 
-        temperature_warning_conf = {
-            "warning_type": "window",
-            "warning_text": "Broken windo detected!",
-            "no_warning_text": "Closed",
-            "no_warning_icon": "pages/images/warning/no_window.png",
-            "warning_icon": "pages/images/warning/window.png",
-            "warning_color": "color: orange;",
-            "no_warning_color": "color: green;",
-            "grid_position": {
-                "row": 1,
-                "column": 0,  # Position différente pour éviter le chevauchement
-                "row_n": 2,
-                "column_n": 4
-            }
-        }
-        self.warning_frame(temperature_warning_conf)
 
     def _load_stylesheet(self, filename):
         file = QFile(filename)

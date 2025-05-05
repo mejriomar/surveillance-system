@@ -1,12 +1,39 @@
-from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QGridLayout, QFrame, QSpacerItem, QSizePolicy,QPushButton,QToolButton
+from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QGridLayout, QFrame, QSpacerItem, QSizePolicy,QPushButton,QToolButton,QHBoxLayout
 from PyQt6.QtGui import QFont,QIcon,QPixmap
-from PyQt6.QtCore import Qt, QFile, QTextStream,QSize,QThread, pyqtSignal
-from features.videoPlayer import VideoPlayer
-from features.background_tasks import Background_tasks
+from PyQt6.QtCore import Qt, QFile, QTextStream,QSize,QThread, pyqtSignal,QTimer
+from features.background_tasks import Background_tasks, Background_tasks_nn
 import json
 import time
-from features.functions import dynamic_resize_image, dynamic_resize_text, resize_button_icon
+from features.functions import dynamic_resize_image, dynamic_resize_text, resize_button_icon,send_http_get,modify_json
 from features.backend import websocket_client
+from features.backend import websocket_client
+from features.history_ui import EventHistoryWidget
+from features.browserWindow import camera
+from features.webDialog import WebDialog
+from features.functions import history
+
+class ToastNotification(QLabel):
+    def __init__(self, message: str, parent=None):
+        super().__init__(message, parent)
+        self.setStyleSheet("""
+            background-color: rgba(255, 165, 0, 220);
+            color: black;
+            border: 2px solid black;
+            border-radius: 8px;
+            padding: 8px;
+            font-weight: bold;
+        """)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.ToolTip)
+        self.adjustSize()
+        self.timer = QTimer(self)
+        self.timer.setInterval(3000)
+        self.timer.timeout.connect(self.hide)
+
+    def show_notification(self, x, y):
+        self.move(x, y)
+        self.show()
+        self.timer.start()
+
 
 class Camera(QWidget):
     def __init__(self):
@@ -25,14 +52,58 @@ class Camera(QWidget):
         title.setFont(QFont("Arial", 16, QFont.Weight.Bold))
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setObjectName("page_title")
-        main_layout.addWidget(title)
+        # Titre
+        title = QLabel("Surveillance camera")
+        title.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setObjectName("page_title")
+
+        self.record_button = self.create_button("pages/images/cam_controler/no_rec.png")
+        self.record_button.setCheckable(True)
+        self.enble_auto_rec_button = self.create_button("pages/images/cam_controler/no_auto_rec.png")
+        self.enble_auto_rec_button.setCheckable(True)
+        self.enble_auto_rec_button.clicked.connect(self.auto_record)
+
+        self.ip_addaress = "http://goldtech_camera.local"
+
+        self.config_button = self.create_button("pages/images/cam_controler/conf.png")
+        self.config_button.clicked.connect(self.open_web_dialog)
+        camera.grabber.motion_detected.connect(self.show_motion_alert)
+        self.is_reccording = False
+        self.is_auto_reccording = False
+        self.timer_reccording = QTimer(self)
+        self.timer_reccording.setInterval(10000)
+
+
+        self.record_button.clicked.connect(self.start_record)
+        camera.stop_recording()
+
+
+        title_layout = QHBoxLayout()
+        title_layout.addWidget(title)
+        title_layout.addWidget(self.record_button)
+        title_layout.addWidget(self.config_button)
+        title_layout.addWidget(self.enble_auto_rec_button)
+        main_layout.addLayout(title_layout)
 
         # Grille principale
         self.grid = QGridLayout()
         self.grid.setContentsMargins(0, 0, 0, 0)
         self.grid.setSpacing(10)
+        # history
+        events_to_display = ("movement","m")  # Événements à afficher
+        self.history = EventHistoryWidget(*events_to_display)
+        self.grid.addWidget(self.history, 0, 2,2,1)  # Correction ici
+        websocket_client.data_received.connect(self.on_data_received)
+
+        # start_camera after 3 seconds
+        self.start_camera = QTimer(self)
+        self.start_camera.setInterval(3000)
+        self.start_camera.timeout.connect(self.start_camera_delay)
+        self.start_camera.start()
+
         self.button_layout = QGridLayout()
-        self.video_frame()
+        self.grid.addLayout(self.get_h_views(),0, 0,1,2)
         self.cam_controler()
 
         # Initialisation d'attributs pour le caching et la réutilisation
@@ -46,18 +117,62 @@ class Camera(QWidget):
         self.background_tasks = Background_tasks()
         self.background_tasks.signal1.connect(self.repetitive)
         self.background_tasks.start()
-
-
-
-
         # Ajouter la grille au layout principal avec un stretch factor
         main_layout.addLayout(self.grid, 1)
 
+        # get ip address every 3 seconds
+        self.get_ip_delay = QTimer(self)
+        self.get_ip_delay.setInterval(3000)
+        self.get_ip_delay.timeout.connect(self.get_ip)
+        self.get_ip_delay.start()
+
+    def start_camera_delay(self):
+        camera.start_camera()
+        self.start_camera.stop()  # Arrêter le timer après le démarrage de la caméra
+
+    def show_motion_alert(self):
+        toast = ToastNotification("⚠️ Mouvement détecté !", self)
+        x = self.width() - toast.width() - 20
+        y = self.height() - toast.height() - 20
+
+        toast.show_notification(x, y)
+        if self.is_reccording == False:
+            # print(f"is_auto_reccording = {self.is_auto_reccording}")
+            if self.is_auto_reccording == True:
+                self.is_reccording = True
+                # modify_json("movement", True)
+                camera.start_recording()
+                self.timer_reccording.timeout.connect(self.movement_stope_reccording)
+                self.timer_reccording.start()
+                data =self._load_json("data.json")
+                data["movement"] = True
+                history(data)
+                self.history.refresh_history()
+                # print("Recording started")
+
+    def movement_stope_reccording(self):
+        self.is_reccording = False
+        # modify_json("movement", False)
+        data =self._load_json("data.json")
+        data["movement"] = False
+        history(data)
+        self.history.refresh_history()
+        camera.stop_recording()
+        self.timer_reccording.stop()
+
+
+
+    def open_web_dialog(self):
+        dialog = WebDialog("http://goldtech_camera.local")
+        dialog.exec()
+
+    def on_data_received(self, data):
+        self.history.refresh_history()
 
     def create_button(self,icon_path):
         button = QToolButton()
         button.setIcon(QIcon(icon_path))
-        resize_button_icon(button, self.width(), self.height(), scale_factor=0.2)  # Redimensionner l'icône
+        resize_button_icon(button, self.width(), self.height(), scale_factor=0.12)  # Redimensionner l'icône
         button.setAutoRaise(True)  # Effet de surbrillance au survol
         button.setObjectName("control_button")
         button.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -67,10 +182,15 @@ class Camera(QWidget):
         up_button = self.create_button("pages/images/cam_controler/up.png")
         up_button.clicked.connect(self.up)
         down_button = self.create_button("pages/images/cam_controler/down.png")
+        down_button.clicked.connect(self.down)
         left_button = self.create_button("pages/images/cam_controler/left.png")
+        left_button.clicked.connect(self.left)
         right_button = self.create_button("pages/images/cam_controler/right.png")
-        reset_button = self.create_button("pages/images/cam_controler/reset.png")
-        reset_button.setIconSize(QSize(50, 50))  # Taille de l'icône
+        right_button.clicked.connect(self.right)
+        self.reset_button = self.create_button("pages/images/cam_controler/reset.png")
+        self.reset_button.setCheckable(True)
+        self.reset_button.clicked.connect(self.reset)
+        self.reset_button.setIconSize(QSize(30, 30))  # Taille de l'icône
         # Configuration du layout en grille
         self.button_layout.setContentsMargins(10, 10, 10, 10)
         self.button_layout.setHorizontalSpacing(0)
@@ -78,7 +198,7 @@ class Camera(QWidget):
 
         self.button_layout.addWidget(up_button, 0, 1,Qt.AlignmentFlag.AlignBottom)
         self.button_layout.addWidget(left_button, 1, 0,Qt.AlignmentFlag.AlignRight)
-        self.button_layout.addWidget(reset_button, 1, 1,Qt.AlignmentFlag.AlignCenter)
+        self.button_layout.addWidget(self.reset_button, 1, 1,Qt.AlignmentFlag.AlignCenter)
         self.button_layout.addWidget(right_button, 1, 2,Qt.AlignmentFlag.AlignLeft)
         self.button_layout.addWidget(down_button, 2, 1,Qt.AlignmentFlag.AlignTop)
 
@@ -86,17 +206,10 @@ class Camera(QWidget):
         self.button_layout.down_button = down_button
         self.button_layout.left_button = left_button
         self.button_layout.right_button = right_button
-        self.button_layout.reset_button = reset_button
+        self.button_layout.reset_button = self.reset_button
 
-        self.grid.addLayout(self.button_layout,0, 2,2,2)
+        self.grid.addLayout(self.button_layout,1, 1,1,1)
 
-
-    def video_frame(self):
-        self.video_player = VideoPlayer()
-        frame = QFrame()
-        frame.setObjectName("video")
-        frame.setLayout(self.video_player.play_video())
-        self.grid.addWidget(frame,0, 0,4,2)
     def _load_json(self, filename):
         with open(filename, "r", encoding="utf-8") as file:
             return json.load(file)
@@ -124,7 +237,7 @@ class Camera(QWidget):
         # Label pour le texte d'avertissement
         warning_text_label = QLabel()
         warning_text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        warning_text_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        warning_text_label.setFont(QFont("Arial", 12, QFont.Weight.Bold))
         warning_text_label.setObjectName("warning_text")
         warning_text_label.setContentsMargins(0, 0, 0, 0)
 
@@ -141,8 +254,8 @@ class Camera(QWidget):
         Met à jour ou crée un widget d'avertissement avec les informations fournies dans warn_conf.
         Chaque widget est indexé par sa position (row, column) pour garantir l'unicité.
         """
-        warn_max_size = 200
-        warn_size_variable = 100  # Valeur de taille variable pour l'animation
+        warn_max_size = 100
+        warn_size_variable = 50  # Valeur de taille variable pour l'animation
         grid_pos = warn_conf["grid_position"]
         # Utiliser la position comme clé unique (row, column)
         key = (grid_pos["row"], grid_pos["column"])
@@ -177,7 +290,7 @@ class Camera(QWidget):
 
         # Mettre à jour l'image en redimensionnant le pixmap
         dynamic_resize_image(frame, frame.warning_label, pixmap, percentage=0.3, max_size=self.warn_size[key])
-        dynamic_resize_text(frame, frame.warning_text_label, percentage=0.05, min_font_size=10, max_font_size=20)
+        dynamic_resize_text(frame, frame.warning_text_label, percentage=0.05, min_font_size=5, max_font_size=10)
 
     def repetitive(self):
         """Méthode appelée périodiquement par Background_tasks pour mettre à jour les avertissements."""
@@ -191,10 +304,10 @@ class Camera(QWidget):
             "warning_color": "color: #FF9800;",
             "no_warning_color": "color: green;",
             "grid_position": {
-                "row": 2,
-                "column": 2,
-                "row_n": 2,
-                "column_n": 2
+                "row": 1,
+                "column": 0,
+                "row_n": 1,
+                "column_n": 1
             }
         }
         self.warning_frame(motion_warning_conf)
@@ -205,8 +318,55 @@ class Camera(QWidget):
             self.setStyleSheet(stream.readAll())
             file.close()
     def up(self):
-        print("up")
-        data = {"command": "toggle", "value": 1}
-        websocket_client.send_data(data)
+        print(send_http_get(self.ip_addaress + "/servo", {"dir": "up"}))
+    def down(self):
+        print(send_http_get(self.ip_addaress + "/servo", {"dir": "down"}))
+    def left(self):
+        print(send_http_get(self.ip_addaress + "/servo", {"dir": "left"}))
+    def right(self):
+        print(send_http_get(self.ip_addaress + "/servo", {"dir": "right"}))
+    def reset(self):
+        # ip = send_http_get(self.ip_addaress + "/ip")
+        # self.ip_addaress = "http://"+ip
+        if self.reset_button.isChecked():
+            print(send_http_get(self.ip_addaress + "/servo", {"dir": "led_on"}))
+        else:
+            print(send_http_get(self.ip_addaress + "/servo", {"dir": "led_off"}))
+
+
+
+    def get_ip(self):
+        try:
+            ip = send_http_get(self.ip_addaress + "/ip")
+            self.ip_addaress = "http://"+ip
+            print(self.ip_addaress)
+        except:
+            print("Error: Unable to connect to the camera.")
+        self.get_ip_delay.stop()  # Arrêter le timer si l'IP ne peut pas être récupérée
+
+    def get_h_views(self):
+        self.h_views = QHBoxLayout()
+        views = camera.get_views()
+        self.h_views.addWidget(views[0])
+        return self.h_views
+
+    def start_record(self):
+        if  self.record_button.isChecked():
+             self.record_button.setIcon(QIcon("pages/images/cam_controler/rec.png"))
+             camera.start_recording()
+        else:
+            self.record_button.setIcon(QIcon("pages/images/cam_controler/no_rec.png"))
+            camera.stop_recording()
+
+    def auto_record(self):
+        # ip = send_http_get(self.ip_addaress + "/ip")
+        # self.ip_addaress = "http://"+ip
+        if self.enble_auto_rec_button.isChecked():
+            self.is_auto_reccording = True
+            self.enble_auto_rec_button.setIcon(QIcon("pages/images/cam_controler/auto_rec.png"))
+        else:
+            self.is_auto_reccording = False
+            self.enble_auto_rec_button.setIcon(QIcon("pages/images/cam_controler/no_auto_rec.png"))
+
 
 

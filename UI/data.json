@@ -6,6 +6,6 @@
     "gaz": false,
     "dore": false,
     "window": false,
-    "voice": true,
-    "tempreture_value": 21
+    "voice": false,
+    "tempreture_value": 335
 }
