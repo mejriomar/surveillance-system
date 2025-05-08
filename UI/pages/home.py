@@ -90,6 +90,10 @@ class Home(QWidget):
         # Conserver les références pour une mise à jour facile
         frame.warning_label = warning_label
         frame.warning_text_label = warning_text_label
+        self.frame_size_h = 200
+        self.frame_size_w = 300
+        frame.setMinimumSize(self.frame_size_w, self.frame_size_h)  # Taille minimale pour éviter les problèmes d'affichage
+        # frame.setMaximumSize(self.frame_size_w, self.frame_size_h)
         return frame
 
     def warning_frame(self, warn_conf):
@@ -116,6 +120,9 @@ class Home(QWidget):
 
         # Recharger les données JSON
         self.data = self._load_json("data.json")
+        if warn_conf["warning_type"] == "movement":
+            self.data = self._load_json("data_movemnt.json")
+
         # Récupérer la valeur pour ce type d'avertissement
         warn_status = self.data.get(warn_conf["warning_type"], 0)
 

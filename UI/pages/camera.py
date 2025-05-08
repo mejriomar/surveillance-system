@@ -4,13 +4,13 @@ from PyQt6.QtCore import Qt, QFile, QTextStream,QSize,QThread, pyqtSignal,QTimer
 from features.background_tasks import Background_tasks, Background_tasks_nn
 import json
 import time
-from features.functions import dynamic_resize_image, dynamic_resize_text, resize_button_icon,send_http_get,modify_json
+from features.functions import dynamic_resize_image, dynamic_resize_text, resize_button_icon,send_http_get,send_http_get_asnych
 from features.backend import websocket_client
 from features.backend import websocket_client
 from features.history_ui import EventHistoryWidget
 from features.browserWindow import camera
 from features.webDialog import WebDialog
-from features.functions import history
+from datetime import datetime
 
 class ToastNotification(QLabel):
     def __init__(self, message: str, parent=None):
@@ -108,7 +108,7 @@ class Camera(QWidget):
 
         # Initialisation d'attributs pour le caching et la réutilisation
         self.pixmap_cache = {}
-        self.data = self._load_json("data.json")
+        self.data = self._load_json("data_movemnt.json")
         self.warn_size = 100  # Taille initiale
         self.warning_frames = {}  # Dictionnaire pour stocker plusieurs widgets d'avertissement
         self.warn_size = {}  # Taille initiale
@@ -120,11 +120,7 @@ class Camera(QWidget):
         # Ajouter la grille au layout principal avec un stretch factor
         main_layout.addLayout(self.grid, 1)
 
-        # get ip address every 3 seconds
-        self.get_ip_delay = QTimer(self)
-        self.get_ip_delay.setInterval(3000)
-        self.get_ip_delay.timeout.connect(self.get_ip)
-        self.get_ip_delay.start()
+        send_http_get_asnych(self.ip_addaress + "/ip", None, self.get_ip)
 
     def start_camera_delay(self):
         camera.start_camera()
@@ -144,18 +140,18 @@ class Camera(QWidget):
                 camera.start_recording()
                 self.timer_reccording.timeout.connect(self.movement_stope_reccording)
                 self.timer_reccording.start()
-                data =self._load_json("data.json")
+                data =self._load_json("data_movemnt.json")
                 data["movement"] = True
-                history(data)
+                self.history_save(data)
                 self.history.refresh_history()
                 # print("Recording started")
 
     def movement_stope_reccording(self):
         self.is_reccording = False
         # modify_json("movement", False)
-        data =self._load_json("data.json")
+        data =self._load_json("data_movemnt.json")
         data["movement"] = False
-        history(data)
+        self.history_save(data)
         self.history.refresh_history()
         camera.stop_recording()
         self.timer_reccording.stop()
@@ -218,6 +214,7 @@ class Camera(QWidget):
         """Retourne un QPixmap mis en cache pour éviter de recharger l'image à chaque fois."""
         if path not in self.pixmap_cache:
             self.pixmap_cache[path] = QPixmap(path)
+
         return self.pixmap_cache[path]
 
     def create_warning_frame(self):
@@ -272,24 +269,25 @@ class Camera(QWidget):
             frame = self.warning_frames[key]
 
         # Recharger les données JSON
-        self.data = self._load_json("data.json")
+        self.data = self._load_json("data_movemnt.json")
         # Récupérer la valeur pour ce type d'avertissement
         warn_status = self.data.get(warn_conf["warning_type"], 0)
 
         if warn_status == 1:
-            self.warn_size[key] = self.warn_size[key] + warn_max_size - warn_size_variable if self.warn_size[key] < warn_max_size else warn_max_size - warn_size_variable
+            # self.warn_size[key] = self.warn_size[key] + warn_max_size - warn_size_variable if self.warn_size[key] < warn_max_size else warn_max_size - warn_size_variable
 
             pixmap = self.get_pixmap(warn_conf["warning_icon"])
             frame.warning_text_label.setText(warn_conf["warning_text"])
             frame.warning_text_label.setStyleSheet(warn_conf["warning_color"])
         else:
-            self.warn_size[key] = warn_max_size
+            # self.warn_size[key] = warn_max_size
             pixmap = self.get_pixmap(warn_conf["no_warning_icon"])
             frame.warning_text_label.setText(warn_conf["no_warning_text"])
             frame.warning_text_label.setStyleSheet(warn_conf["no_warning_color"])
 
+        frame.warning_label.setPixmap(pixmap.scaled(self.warn_size[key], self.warn_size[key], Qt.AspectRatioMode.KeepAspectRatio))
         # Mettre à jour l'image en redimensionnant le pixmap
-        dynamic_resize_image(frame, frame.warning_label, pixmap, percentage=0.3, max_size=self.warn_size[key])
+        # dynamic_resize_image(frame, frame.warning_label, pixmap, percentage=0.3, max_size=self.warn_size[key])
         dynamic_resize_text(frame, frame.warning_text_label, percentage=0.05, min_font_size=5, max_font_size=10)
 
     def repetitive(self):
@@ -318,31 +316,27 @@ class Camera(QWidget):
             self.setStyleSheet(stream.readAll())
             file.close()
     def up(self):
-        print(send_http_get(self.ip_addaress + "/servo", {"dir": "up"}))
+        send_http_get_asnych(self.ip_addaress + "/servo", {"dir": "up"})
     def down(self):
-        print(send_http_get(self.ip_addaress + "/servo", {"dir": "down"}))
+        send_http_get_asnych(self.ip_addaress + "/servo", {"dir": "down"})
     def left(self):
-        print(send_http_get(self.ip_addaress + "/servo", {"dir": "left"}))
+        send_http_get_asnych(self.ip_addaress + "/servo", {"dir": "left"})
     def right(self):
-        print(send_http_get(self.ip_addaress + "/servo", {"dir": "right"}))
+        send_http_get_asnych(self.ip_addaress + "/servo", {"dir": "right"})
     def reset(self):
         # ip = send_http_get(self.ip_addaress + "/ip")
         # self.ip_addaress = "http://"+ip
         if self.reset_button.isChecked():
-            print(send_http_get(self.ip_addaress + "/servo", {"dir": "led_on"}))
+            send_http_get_asnych(self.ip_addaress + "/servo", {"dir": "led_on"})
         else:
-            print(send_http_get(self.ip_addaress + "/servo", {"dir": "led_off"}))
+            send_http_get_asnych(self.ip_addaress + "/servo", {"dir": "led_off"})
 
 
 
-    def get_ip(self):
-        try:
-            ip = send_http_get(self.ip_addaress + "/ip")
-            self.ip_addaress = "http://"+ip
-            print(self.ip_addaress)
-        except:
-            print("Error: Unable to connect to the camera.")
-        self.get_ip_delay.stop()  # Arrêter le timer si l'IP ne peut pas être récupérée
+    def get_ip(self,result):
+        self.ip_addaress = "http://"+result
+        print(self.ip_addaress)
+
 
     def get_h_views(self):
         self.h_views = QHBoxLayout()
@@ -368,5 +362,58 @@ class Camera(QWidget):
             self.is_auto_reccording = False
             self.enble_auto_rec_button.setIcon(QIcon("pages/images/cam_controler/no_auto_rec.png"))
 
+    def history_save(self,current_data):
+        """
+        Fonction pour gérer l'historique des événements avec des couples [detected, fixed].
 
+        :param current_data: Dictionnaire contenant les données actuelles des capteurs.
+        """
+        # Charger les données précédentes
+        try:
+            with open('data_movemnt.json', 'r') as f:
+                previous_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            previous_data = {
+                "movement": False,
+                "access": False,
+                "temperature": False,
+                "flame": False,
+                "gaz": False,
+                "dore": False,
+                "window": False,
+                "voice": False,
+                "tempreture_value": 0
+            }
 
+        # Charger l'historique existant
+        try:
+            with open('history.json', 'r') as f:
+                history_data = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            history_data = {}
+
+        sensor = 'movement'
+        if sensor not in history_data:
+            history_data[sensor] = []
+
+        # Changement de False → True (détecté)
+        if not previous_data[sensor] and current_data[sensor]:
+            event_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            history_data[sensor].append([event_time, None])  # Ajouter un couple avec detected et fixed=None
+
+        # Changement de True → False (réparé)
+        elif previous_data[sensor] and not current_data[sensor]:
+            event_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # Trouver le dernier événement détecté sans date de résolution
+            for event in reversed(history_data[sensor]):
+                if event[1] is None:  # Si fixed est encore None
+                    event[1] = event_time  # Ajouter la date de résolution
+                    break
+
+        # Sauvegarder l'historique mis à jour
+        with open('history.json', 'w') as f:
+            json.dump(history_data, f, indent=2)
+
+        # Sauvegarder les données actuelles comme précédentes pour la prochaine exécution
+        with open('data_movemnt.json', 'w') as f:
+            json.dump(current_data, f, indent=2)

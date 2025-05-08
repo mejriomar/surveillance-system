@@ -19,7 +19,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Gold Tech")
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(1366 , 768 )
 
         # Démarrer le client WebSocket
         websocket_client.start()

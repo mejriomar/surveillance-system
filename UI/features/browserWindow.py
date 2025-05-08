@@ -124,7 +124,7 @@ class CameraEngine:
     def __init__(self):
         pass
 
-    def init(self, stream_url: str, n_views: int = 1, view_size=(320,240)):
+    def init(self, stream_url: str, n_views: int = 1, view_size=(640,400)):
         self.grabber = CameraGrabber(stream_url)
         self.views = [CameraView(view_size) for _ in range(n_views)]
         for v in self.views:

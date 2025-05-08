@@ -3,6 +3,7 @@ from PyQt6.QtCore import Qt, QSize
 import requests
 import json
 from datetime import datetime
+import threading
 def dynamic_resize_image(widget, image_label, original_pixmap, percentage=0.3, max_size=200):
     """
     Redimensionne l'image dans image_label en fonction de la largeur de widget.
@@ -21,7 +22,6 @@ def dynamic_resize_image(widget, image_label, original_pixmap, percentage=0.3, m
         scaled_pixmap = original_pixmap.scaled(
             image_size, image_size,
             Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
         )
         image_label.setPixmap(scaled_pixmap)
 
@@ -78,6 +78,32 @@ def send_http_get(url, params=None):
             return response.text  # Sinon retourne le texte brut
     except requests.exceptions.RequestException as e:
         return f"Erreur : {e}"
+
+def send_http_get_asnych(url, params=None, callback=None):
+    """
+    Envoie une requête HTTP GET dans un thread séparé.
+
+    :param url: URL de destination (ex: "http://192.168.4.1/servo")
+    :param params: Dictionnaire de paramètres GET (ex: {"dir": "up"})
+    :param callback: Fonction à appeler avec le résultat (optionnel)
+    """
+
+    def request_thread():
+        try:
+            response = requests.get(url, params=params, timeout=5)
+            response.raise_for_status()
+            try:
+                result = response.json()
+            except ValueError:
+                result = response.text
+        except requests.exceptions.RequestException as e:
+            result = f"Erreur : {e}"
+
+        if callback:
+            callback(result)
+
+    thread = threading.Thread(target=request_thread)
+    thread.start()
 
 
 

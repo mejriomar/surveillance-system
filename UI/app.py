@@ -1,8 +1,8 @@
 import sys
 from PyQt6.QtWidgets import QApplication
 from main_window import MainWindow
-from PyQt6.QtGui import QIcon
-
+import signal
+import sys
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

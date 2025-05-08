@@ -1,11 +1,11 @@
 {
-    "movement": false,
-    "access": false,
-    "temperature": false,
-    "flame": false,
-    "gaz": false,
-    "dore": false,
-    "window": false,
-    "voice": false,
-    "tempreture_value": 335
+  "movement": true,
+  "access": true,
+  "temperature": true,
+  "flame": true,
+  "gaz": true,
+  "dore": true,
+  "window": true,
+  "voice": true,
+  "tempreture_value": 12
 }
