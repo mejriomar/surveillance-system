@@ -90,6 +90,10 @@ class Fire_detection(QWidget):
         # Conserver les références pour une mise à jour facile
         frame.warning_label = warning_label
         frame.warning_text_label = warning_text_label
+        self.frame_size_h = 200
+        self.frame_size_w = 400
+        frame.setMinimumSize(self.frame_size_w, self.frame_size_h)  # Taille minimale pour éviter les problèmes d'affichage
+        # frame.setMaximumSize(self.frame_size_w, self.frame_size_h)
         return frame
 
     def warning_frame(self, warn_conf):

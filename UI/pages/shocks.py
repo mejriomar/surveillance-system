@@ -88,6 +88,7 @@ class Shock(QWidget):
         # Conserver les références pour une mise à jour facile
         frame.warning_label = warning_label
         frame.warning_text_label = warning_text_label
+
         return frame
 
     def warning_frame(self, warn_conf):

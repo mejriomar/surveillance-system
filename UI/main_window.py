@@ -19,7 +19,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Gold Tech")
-        self.setMinimumSize(800, 600)
+        self.setMinimumSize(1366 , 768 )
 
         # Démarrer le client WebSocket
         websocket_client.start()
@@ -89,7 +89,7 @@ class MainWindow(QMainWindow):
 
         # 2) Ajouter les boutons de navigation
         self.nav_buttons = []
-        page_names = ["Home", "Fire", "Shocks","identify","Camera","Notification","Wifi status"]  # Noms personnalisés
+        page_names = ["Home", "Camera","Fire", "Shocks","identify","Notification","Wifi status"]  # Noms personnalisés
 
         for i in range(7):
             btn = QPushButton(page_names[i])
@@ -110,10 +110,10 @@ class MainWindow(QMainWindow):
         # Créer les pages
         self.pages = [
             Home(),
+            Camera(),
             Fire_detection(),
             Shock(),
             Identify(),
-            Camera(),
             Notification(),
             Wifi_status()
         ]
