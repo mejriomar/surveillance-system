@@ -274,13 +274,13 @@ class Camera(QWidget):
         warn_status = self.data.get(warn_conf["warning_type"], 0)
 
         if warn_status == 1:
-            self.warn_size[key] = self.warn_size[key] + warn_max_size - warn_size_variable if self.warn_size[key] < warn_max_size else warn_max_size - warn_size_variable
+            # self.warn_size[key] = self.warn_size[key] + warn_max_size - warn_size_variable if self.warn_size[key] < warn_max_size else warn_max_size - warn_size_variable
 
             pixmap = self.get_pixmap(warn_conf["warning_icon"])
             frame.warning_text_label.setText(warn_conf["warning_text"])
             frame.warning_text_label.setStyleSheet(warn_conf["warning_color"])
         else:
-            self.warn_size[key] = warn_max_size
+            # self.warn_size[key] = warn_max_size
             pixmap = self.get_pixmap(warn_conf["no_warning_icon"])
             frame.warning_text_label.setText(warn_conf["no_warning_text"])
             frame.warning_text_label.setStyleSheet(warn_conf["no_warning_color"])
